@@ -63,40 +63,28 @@ public class MainActivity extends AppCompatActivity {
 
         recipes = new ArrayList<>();
 
-        recipes.add(new Recipe("", ""));
-        recipes.add(new Recipe("", ""));
+        recipes.add(new Recipe("Swipe to load recipes", ""));
+        recipes.add(new Recipe("Swipe further to load recipes", ""));
         recipes.add(new Recipe("", ""));
         recipes.add(new Recipe("", ""));
 
-        new GameAsyncTask().execute();
+        new GetRecipesTask().execute();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // Create the adapter that will return a fragment for each of the three
-        // primary sections of the activity.
+
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
-        // Set up the ViewPager with the sections adapter.
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
-        //mViewPager.addOnPageChangeListener((ViewPager.OnPageChangeListener) mSectionsPagerAdapter);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
     }
-/*
-    public void onPageSelected(int position) {
-            mSectionsPagerAdapter.notifyDataSetChanged();
-        }
-*/
 
-    class GameAsyncTask extends AsyncTask<Void, Void, List> {
+    class GetRecipesTask extends AsyncTask<Void, Void, List> {
+
+        protected void onPreExecute ()
+        {
+            super.onPreExecute();
+        }
 
         @Override
         protected List doInBackground(Void... params) {
@@ -119,33 +107,6 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private List getData() {
-    Food2ForkApiService service = Food2ForkApiService.retrofit.create(Food2ForkApiService.class);
-            String key = service.API_KEY;
-            String term = "";
-            int page = 1;
-            final ArrayList<Recipe> searchResults = new ArrayList<>();
-
-            Call<Results> call = service.searchRecipes(key, term, page);
-            call.enqueue(new Callback<Results>() {
-                @Override
-                public void onResponse(Call<Results> call, Response<Results> response) {
-                    Results results = response.body();
-                    searchResults.addAll(results.getRecipes());
-                    mSectionsPagerAdapter.notifyDataSetChanged();
-                    //updateUI();
-                }
-                @Override
-                public void onFailure(Call<Results> call, Throwable t) {
-                    Toast.makeText(MainActivity.this, "Failed", Toast.LENGTH_SHORT).show();
-                }
-            });
-        mSectionsPagerAdapter.notifyDataSetChanged();
-        return  searchResults;
-
-    }
-
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -161,9 +122,34 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    /**
-     * A placeholder fragment containing a simple view.
-     */
+
+
+    private List getData() {
+    Food2ForkApiService service = Food2ForkApiService.retrofit.create(Food2ForkApiService.class);
+            String key = service.API_KEY;
+            String term = "";
+            int page = 1;
+            final ArrayList<Recipe> searchResults = new ArrayList<>();
+
+            Call<Results> call = service.searchRecipes(key, term, page);
+            call.enqueue(new Callback<Results>() {
+                @Override
+                public void onResponse(Call<Results> call, Response<Results> response) {
+                    Results results = response.body();
+                    searchResults.addAll(results.getRecipes());
+                    mSectionsPagerAdapter.notifyDataSetChanged();
+                    mViewPager.setCurrentItem(1, false);
+                }
+                @Override
+                public void onFailure(Call<Results> call, Throwable t) {
+                    Toast.makeText(MainActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+                }
+            });
+        mSectionsPagerAdapter.notifyDataSetChanged();
+        return  searchResults;
+
+    }
+
     public static class PlaceholderFragment extends Fragment {
         /**
          * The fragment argument representing the section number for this
@@ -174,16 +160,11 @@ public class MainActivity extends AppCompatActivity {
         public PlaceholderFragment() {
         }
 
-        /**
-         * Returns a new instance of this fragment for the given section
-         * number.
-         */
         public static PlaceholderFragment newInstance(int sectionNumber) {
             PlaceholderFragment fragment = new PlaceholderFragment();
             Bundle args = new Bundle();
             args.putInt(ARG_SECTION_NUMBER, sectionNumber);
-            args.putString("Title", recipes.get(sectionNumber-1).getTitle());
-            args.putString("ImageUrl", recipes.get(sectionNumber-1).getImageUrl());
+
             fragment.setArguments(args);
             return fragment;
         }
@@ -192,11 +173,15 @@ public class MainActivity extends AppCompatActivity {
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+
             TextView textView = (TextView) rootView.findViewById(R.id.section_label);
-            textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
+            textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)+1));
+
+            int position = (getArguments().getInt(ARG_SECTION_NUMBER));
+
             TextView title = rootView.findViewById(R.id.title);
-            int position = (getArguments().getInt(ARG_SECTION_NUMBER)-1);
             title.setText(recipes.get(position).getTitle());
+
             ImageView image = rootView.findViewById(R.id.image);
             String myImageString = recipes.get(position).getImageUrl();
             if (myImageString.equals("")) image.setVisibility(View.INVISIBLE);
@@ -206,20 +191,7 @@ public class MainActivity extends AppCompatActivity {
             return rootView;
         }
     }
-/*
-    private void updateUI() {
-        if (mSectionsPageAdapter == null) {
-            mSectionsPageAdapter = new SectionsPageAdapter(getSupportFragmentManager());
-            mViewPager.setAdapter(mSectionsPageAdapter);
-        }
-        mSectionsPageAdapter.notifyDataSetChanged();
-    }
-*/
 
-    /**
-     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
-     * one of the sections/tabs/pages.
-     */
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
         public SectionsPagerAdapter(FragmentManager fm) {
@@ -230,14 +202,11 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public Fragment getItem(int position) {
-            // getItem is called to instantiate the fragment for the given page.
-            // Return a PlaceholderFragment (defined as a static inner class below).
-            return PlaceholderFragment.newInstance(position + 1);
+            return PlaceholderFragment.newInstance(position);
         }
 
         @Override
         public int getCount() {
-            //return 4;
             return 4;
         }
     }
